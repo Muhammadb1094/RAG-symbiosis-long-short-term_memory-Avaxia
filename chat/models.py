@@ -27,5 +27,4 @@ class Message(models.Model):
 @receiver(post_delete, sender=Message)
 def post_delete_message(sender, instance, **kwargs):
     client = MilvusClient(settings.MILVUS_DB_NAME)
-    res = client.delete(collection_name="message", ids=[int(instance.id)])
-    print(res,"Deleted the object from vector database as well.")
+    client.delete(collection_name="message", ids=[int(instance.id)])

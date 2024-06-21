@@ -14,9 +14,7 @@ def get_embedding(text, model_id="text-embedding-ada-002"):
                 model=model_id
         )
         embeddings = response['data'][0]['embedding']
-        print(embeddings)
         dimensions = len(embeddings)
-        print(f"Dimensions: {dimensions}")
         return embeddings
 
 

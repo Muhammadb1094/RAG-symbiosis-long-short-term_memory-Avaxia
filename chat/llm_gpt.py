@@ -30,13 +30,10 @@ def check_gpt_knows_answer_yes_no(query, answer):
     chain = prompt | model | parser
     result = chain.invoke({"query": query, "answer": answer})
 
-    # print(result)
     return result.knows_answer
     
 
 def short_term_memory_llm(query, conver_id):
-    print("::: Short Term Memory calling :::")
-
     memory = ConversationBufferMemory()
     try:
         if not conver_id == "" or not conver_id is None:
@@ -50,7 +47,7 @@ def short_term_memory_llm(query, conver_id):
                 memory.chat_memory.add_ai_message(ai_message)
             memory.load_memory_variables({})
     except Exception as e:
-        print(e)
+        pass
 
     llm = OpenAI(temperature=0, model_name="gpt-3.5-turbo")
     conversation = ConversationChain(
@@ -62,9 +59,7 @@ def short_term_memory_llm(query, conver_id):
     return output
 
 
-def long_term_memory_llm(client, user, prompt, response, conversation_id):
-    print("::: Long Term Memory calling :::")
-    
+def long_term_memory_llm(client, user, prompt, response, conversation_id):    
     embedding_fn = model.DefaultEmbeddingFunction()
 
     memorybuffer = client.search(
@@ -75,48 +70,47 @@ def long_term_memory_llm(client, user, prompt, response, conversation_id):
                                 "prompt", "response", "timestamp"],
             limit=1
         )
-    print("::: Memory Buffer :::", memorybuffer)
-    # try:
-    memory = ConversationBufferMemory()
-    # Load previous 2 messages from the relevant chat
-    previous_chat = get_previous_messages(client, conversation_id, memorybuffer[0][0]['entity']['id'])
-    for item in previous_chat:
-        user_message = f"{item['prompt']}. At datetime {item['timestamp']}"
-        ai_message = f"{item['response']}. At datetime {item['timestamp']}"
-        
-        memory.chat_memory.add_user_message(user_message)
-        memory.chat_memory.add_ai_message(ai_message)
-    print("::: Previous Chat :::", previous_chat)
-    # Load Relevant message
-    for item in memorybuffer[0]:
-        user_message = f"{item['entity']['prompt']}. At datetime {item['entity']['timestamp']}"
-        ai_message = f"{item['entity']['response']}. At datetime {item['entity']['timestamp']}"
-
-        memory.chat_memory.add_user_message(user_message)
-        memory.chat_memory.add_ai_message(ai_message)
     
-    # Lead the Next Relevant Messages
-    next_chat = get_next_messages(client, conversation_id, memorybuffer[0][0]['entity']['id'])
-    for item in next_chat:
-        user_message = f"{item['prompt']}. At datetime {item['timestamp']}"
-        ai_message = f"{item['response']}. At datetime {item['timestamp']}"
-        
-        memory.chat_memory.add_user_message(user_message)
-        memory.chat_memory.add_ai_message(ai_message)
     
-    print("::: Next Chat :::", next_chat)
+    try:
+        memory = ConversationBufferMemory()
+        
+        # Load previous 2 messages from the relevant chat
+        previous_chat = get_previous_messages(client, conversation_id, memorybuffer[0][0]['entity']['id'])
+        for item in previous_chat:
+            user_message = f"{item['prompt']}. At datetime {item['timestamp']}"
+            ai_message = f"{item['response']}. At datetime {item['timestamp']}"
+            
+            memory.chat_memory.add_user_message(user_message)
+            memory.chat_memory.add_ai_message(ai_message)
+    
+        # Load Relevant message
+        for item in memorybuffer[0]:
+            user_message = f"{item['entity']['prompt']}. At datetime {item['entity']['timestamp']}"
+            ai_message = f"{item['entity']['response']}. At datetime {item['entity']['timestamp']}"
 
-    memory.load_memory_variables({})
-    llm = OpenAI(temperature=0, model_name="gpt-3.5-turbo")
-    conversation = ConversationChain(
-        llm=llm,
-        verbose=True,
-        memory=memory,
-    )
-    return conversation.predict(input=prompt)
+            memory.chat_memory.add_user_message(user_message)
+            memory.chat_memory.add_ai_message(ai_message)
+        
+        # Load the Next Relevant Messages
+        next_chat = get_next_messages(client, conversation_id, memorybuffer[0][0]['entity']['id'])
+        for item in next_chat:
+            user_message = f"{item['prompt']}. At datetime {item['timestamp']}"
+            ai_message = f"{item['response']}. At datetime {item['timestamp']}"
+            
+            memory.chat_memory.add_user_message(user_message)
+            memory.chat_memory.add_ai_message(ai_message)
+    
+        memory.load_memory_variables({})
+        llm = OpenAI(temperature=0, model_name="gpt-3.5-turbo")
+        conversation = ConversationChain(
+            llm=llm,
+            verbose=True,
+            memory=memory,
+        )
+        return conversation.predict(input=prompt)
 
-    # except Exception as e:
-    #     print(e)
-    #     return response
+    except Exception as e:
+        return response
 
 
